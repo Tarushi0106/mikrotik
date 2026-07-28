@@ -1,0 +1,65 @@
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import { config, describeTarget } from './config.js';
+import { registerAuthRoutes } from './auth.js';
+import { registerApiRoutes } from './routes.js';
+import { startSampler, stopSampler } from './trafficSampler.js';
+import { resetClient, activateDevice } from './routeros/index.js';
+import { listDevices, addDevice, getActiveDevice } from './lib/deviceStore.js';
+
+// First run: seed the device list from .env so the router already configured there keeps
+// working. After that, the device store (not .env) is the source of truth for which
+// router is active — switching devices in the dashboard persists across restarts.
+if (listDevices().length === 0) {
+  addDevice({
+    name: config.router.host,
+    host: config.router.host,
+    user: config.router.user,
+    password: config.router.password,
+    apiMode: config.router.mode,
+  });
+}
+const initialDevice = getActiveDevice();
+if (initialDevice) await activateDevice(initialDevice);
+
+const app = express();
+
+app.use(express.json());
+app.use(cookieParser());
+
+registerAuthRoutes(app);
+registerApiRoutes(app);
+
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `No such endpoint: ${req.method} ${req.originalUrl}` });
+});
+
+// Express 5 forwards thrown errors here; without this they would surface as HTML.
+app.use((err, req, res, _next) => {
+  console.error('[server] unhandled error:', err);
+  res.status(500).json({ error: err?.message ?? 'Internal error' });
+});
+
+const server = app.listen(config.server.port, () => {
+  const target = describeTarget();
+  console.log(`\n  Shaurrya NetControl backend`);
+  console.log(`  listening       http://localhost:${config.server.port}`);
+  console.log(`  router host     ${target.host}`);
+  console.log(`  api mode        ${target.mode}`);
+  console.log(`  traffic poll    every ${config.traffic.intervalMs}ms\n`);
+  console.log(`  Check the device with:  npm run probe\n`);
+});
+
+startSampler();
+
+async function shutdown(signal) {
+  console.log(`\n[server] ${signal} received, shutting down.`);
+  stopSampler();
+  await resetClient().catch(() => {});
+  server.close(() => process.exit(0));
+  // Do not hang forever if a socket refuses to drain.
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
