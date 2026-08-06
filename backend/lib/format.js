@@ -61,6 +61,18 @@ function trimZero(text) {
   return text.replace(/\.0$/, '');
 }
 
+export function formatPacketRate(packetsPerSecond) {
+  let value = toNum(packetsPerSecond);
+  if (value < 1) return '0 p/s';
+  const units = ['p/s', 'Kp/s', 'Mp/s'];
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit += 1;
+  }
+  return `${trimZero(value.toFixed(1))} ${units[unit]}`;
+}
+
 /**
  * Converts a RouterOS duration to seconds. Handles both the letter form ("6w2d3h4m5s")
  * and the mixed form ("46d08:12:47") that different menus and versions emit.

@@ -1,4 +1,4 @@
-export default function DataTable({ columns, rows, keyField = 'id' }) {
+export default function DataTable({ columns, rows, keyField = 'id', onRowClick }) {
   return (
     <div className="bg-white rounded-lg border border-black/[0.04] shadow-sm shadow-black/[0.03] overflow-hidden">
       <div className="overflow-x-auto">
@@ -14,7 +14,11 @@ export default function DataTable({ columns, rows, keyField = 'id' }) {
           </thead>
           <tbody className="divide-y divide-black/[0.06]">
             {rows.map((row) => (
-              <tr key={row[keyField]} className="hover:bg-ink-900/[0.02] transition-colors duration-150">
+              <tr
+                key={row[keyField]}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={`hover:bg-ink-900/[0.02] transition-colors duration-150 ${onRowClick ? 'cursor-pointer' : ''}`}
+              >
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 whitespace-nowrap text-ink-700">
                     {col.render ? col.render(row) : row[col.key]}

@@ -44,6 +44,11 @@ export function getDevice(id) {
   return read().devices.find((d) => d.id === id) ?? null;
 }
 
+/** Includes the password. Internal use only (e.g. connecting to take a snapshot) — never send this straight to the client. */
+export function listDevicesWithSecrets() {
+  return read().devices;
+}
+
 export function getActiveDevice() {
   const { devices, activeId } = read();
   return devices.find((d) => d.id === activeId) ?? null;

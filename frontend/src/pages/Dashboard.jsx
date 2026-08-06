@@ -8,12 +8,14 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { FiCpu, FiHardDrive, FiThermometer, FiClock, FiShare2, FiWifi } from 'react-icons/fi';
+import { FiCpu, FiHardDrive, FiThermometer, FiClock, FiShare2, FiWifi, FiServer } from 'react-icons/fi';
 import PageHeader from '../components/ui/PageHeader';
 import StatCard from '../components/ui/StatCard';
 import StatusPill from '../components/ui/StatusPill';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
+import { useDevice } from '../context/DeviceContext';
+import { api } from '../api/client';
 import { systemInfo, trafficHistory, interfaces, wirelessClients } from '../data/mockData';
 
 const demoOverview = {
@@ -38,6 +40,27 @@ export default function Dashboard() {
     fallback: demoOverview,
     refreshMs: 10000,
   });
+  const devices = useResource('/devices', { fallback: [], refreshMs: 0 });
+  const { refresh: refreshDeviceContext } = useDevice();
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState(null);
+  const deviceList = devices.data ?? [];
+  const activeDevice = deviceList.find((d) => d.active);
+
+  async function handleSelectDevice(id) {
+    if (!id || id === activeDevice?.id) return;
+    setSwitching(true);
+    setSwitchError(null);
+    try {
+      await api.post(`/devices/${encodeURIComponent(id)}/activate`);
+      await Promise.all([refresh(), traffic.refresh(), devices.refresh(), refreshDeviceContext()]);
+    } catch (err) {
+      setSwitchError(err.message);
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   const overview = data ?? demoOverview;
   const { system } = overview;
   const overviewInterfaces = overview.interfaces ?? [];
@@ -62,6 +85,29 @@ export default function Dashboard() {
         title="Dashboard"
         description={`${system.identity} · ${system.model} · RouterOS ${system.routerOS}`}
       />
+
+      <div className="flex items-center flex-wrap gap-2 mb-4">
+        <FiServer className="text-ink-500" size={15} />
+        <span className="text-xs font-medium text-ink-700">Device:</span>
+        <select
+          value={activeDevice?.id ?? ''}
+          disabled={switching || deviceList.length === 0}
+          onChange={(e) => handleSelectDevice(e.target.value)}
+          className="text-sm border border-black/10 rounded-lg px-2.5 py-1.5 outline-none transition-shadow duration-150 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:opacity-60"
+        >
+          {deviceList.length === 0 && <option value="">No devices added</option>}
+          {deviceList.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name} ({d.host})
+            </option>
+          ))}
+        </select>
+        {switching && <span className="text-xs text-ink-500">Switching…</span>}
+      </div>
+      {switchError && (
+        <p className="mb-4 text-xs bg-brand-50 text-brand-700 rounded-lg px-3 py-2">{switchError}</p>
+      )}
+
       <DataNotice error={error} live={live} loading={loading} onRetry={refresh} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">

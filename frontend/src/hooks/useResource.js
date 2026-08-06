@@ -14,6 +14,7 @@ export function useResource(path, { fallback = null, refreshMs = 0 } = {}) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Guards against a slow response from an unmounted page overwriting fresh state.
   const activeRef = useRef(true);
@@ -25,6 +26,7 @@ export function useResource(path, { fallback = null, refreshMs = 0 } = {}) {
       setData(result);
       setLive(true);
       setError(null);
+      setLastUpdated(Date.now());
     } catch (err) {
       if (!activeRef.current) return;
       setError(err);
@@ -53,5 +55,5 @@ export function useResource(path, { fallback = null, refreshMs = 0 } = {}) {
     };
   }, [load, refreshMs]);
 
-  return { data, error, loading, live, refresh: load };
+  return { data, error, loading, live, lastUpdated, refresh: load };
 }

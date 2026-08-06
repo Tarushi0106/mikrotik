@@ -5,6 +5,7 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
+import Admin from './pages/Admin';
 import Devices from './pages/Devices';
 import Interfaces from './pages/Interfaces';
 import Wireless from './pages/Wireless';
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<Admin />} />
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/devices" element={<Devices />} />

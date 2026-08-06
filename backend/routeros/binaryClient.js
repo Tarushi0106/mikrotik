@@ -28,8 +28,16 @@ export function createBinaryClient(options) {
       keepalive: true,
     });
 
+    // node-routeros emits 'error' on the socket (dropped connection, remote reset, idle
+    // timeout) even after connect() has already resolved. An EventEmitter 'error' with no
+    // listener is fatal in Node — it throws and takes the whole backend process down. This
+    // listener is what stops that: just drop the dead connection so the next call redials.
+    conn.on('error', () => {
+      if (connection === conn) connection = null;
+    });
+
     try {
-      await conn.connect();
+      await withTimeout(conn.connect(), timeoutMs, `connecting to ${host}`);
     } catch (err) {
       connection = null;
       throw translate(err, host);
@@ -44,10 +52,11 @@ export function createBinaryClient(options) {
     const task = queue.then(async () => {
       const conn = await ensureConnected();
       try {
-        return await conn.write(command, params);
+        return await withTimeout(conn.write(command, params), timeoutMs, `talking to ${host}`);
       } catch (err) {
-        // A dropped socket surfaces here; discard it so the next call reconnects.
-        if (!conn.connected) connection = null;
+        // A dropped socket, or a command that never got a reply, surfaces here; discard
+        // the connection so the next call redials instead of waiting on the same stuck one.
+        if (!conn.connected || err.code === 'TIMEOUT') connection = null;
         throw translate(err, host);
       }
     });
@@ -87,6 +96,30 @@ export function createBinaryClient(options) {
       connection = null;
     },
   };
+}
+
+/**
+ * node-routeros's own internal timeout does not reliably fire for every stall (e.g. the
+ * TCP handshake succeeds but RouterOS's login/reply sequence never completes). Without a
+ * hard external timeout, a stuck connect()/write() hangs forever and blocks every other
+ * request that shares this client via getClient() — this is what makes that impossible.
+ */
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new RouterOsError(`Timed out after ${ms}ms ${label}.`, 'TIMEOUT'));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
 }
 
 /** Converts { name: 'value' } into RouterOS's "=name=value" word format, dropping empties. */

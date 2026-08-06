@@ -1,9 +1,18 @@
 import { config, describeTarget } from './config.js';
-import { getClient, resetClient, testConnection, activateDevice } from './routeros/index.js';
+import { getClient, resetClient, testConnection, activateDevice, getDeviceSnapshot } from './routeros/index.js';
 import { requireAuth } from './auth.js';
 import { getRates, queryHistory, getSamplerStatus } from './trafficSampler.js';
 import { scanServices } from './lib/portScan.js';
-import { listDevices, addDevice, removeDevice, getDevice, getActiveDevice, setActiveDevice } from './lib/deviceStore.js';
+import { formatBytes, formatUptime } from './lib/format.js';
+import {
+  listDevices,
+  addDevice,
+  removeDevice,
+  getDevice,
+  getActiveDevice,
+  setActiveDevice,
+  listDevicesWithSecrets,
+} from './lib/deviceStore.js';
 import {
   flattenHealth,
   mapSystemInfo,
@@ -339,8 +348,8 @@ export function registerApiRoutes(app) {
   );
 
   app.get('/api/traffic', requireAuth, (req, res) => {
-    const { range, date } = req.query;
-    res.json({ history: queryHistory({ range, date }), ...getSamplerStatus() });
+    const { range, date, deviceId } = req.query;
+    res.json({ history: queryHistory({ range, date, deviceId }), ...getSamplerStatus() });
   });
 
   // One round trip for the dashboard instead of four.
@@ -446,6 +455,100 @@ export function registerApiRoutes(app) {
         else await resetClient();
       }
       return { removed: req.params.id };
+    }),
+  );
+
+  // ── Admin overview: fleet-wide status across every added device ──────────────────────
+  // One round trip for the whole admin panel: fleet-wide status for every device, plus
+  // a full deep-dive on whichever device is currently active.
+  app.get(
+    '/api/admin/overview',
+    requireAuth,
+    handler(async () => {
+      const devices = listDevicesWithSecrets();
+      const activeId = getActiveDevice()?.id;
+
+      const [fleetResults, activePanel] = await Promise.all([
+        Promise.all(
+          devices.map(async (d) => {
+            const snapshot = await getDeviceSnapshot(d);
+            const rxBytes = snapshot.online ? snapshot.totalRxBytes : 0;
+            const txBytes = snapshot.online ? snapshot.totalTxBytes : 0;
+            return {
+              id: d.id,
+              name: d.name,
+              host: d.host,
+              active: d.id === activeId,
+              online: snapshot.online,
+              error: snapshot.online ? null : snapshot.error,
+              version: snapshot.version,
+              board: snapshot.board,
+              uptime: snapshot.online ? formatUptime(snapshot.uptime) : null,
+              interfaceCount: snapshot.online ? snapshot.interfaceCount : null,
+              totalBytes: snapshot.online ? formatBytes(rxBytes + txBytes) : null,
+              rxBytes,
+              txBytes,
+            };
+          }),
+        ),
+        (async () => {
+          const client = await getClient();
+          const [
+            system,
+            interfaceRecords,
+            registrations,
+            leases,
+            firewallRules,
+            pppActive,
+            pppSecrets,
+            wgInterfaces,
+            wgPeers,
+            logRecords,
+            userRecords,
+          ] = await Promise.all([
+            readSystemInfo(client),
+            client.list('interface'),
+            listFirstAvailable(client, WIRELESS_PATHS),
+            client.list('ip/dhcp-server/lease').catch(() => []),
+            client.list('ip/firewall/filter').catch(() => []),
+            client.list('ppp/active').catch(() => []),
+            client.list('ppp/secret').catch(() => []),
+            client.list('interface/wireguard').catch(() => []),
+            client.list('interface/wireguard/peers').catch(() => []),
+            client.list('log').catch(() => []),
+            client.list('user').catch(() => []),
+          ]);
+
+          return {
+            system,
+            interfaces: mapInterfaces(interfaceRecords, getRates()),
+            wirelessClients: mapWirelessClients(registrations, leases),
+            traffic: { history: queryHistory({ range: '1h' }), ...getSamplerStatus() },
+            dhcpLeaseCount: leases.length,
+            firewallRuleCount: firewallRules.length,
+            pppActiveCount: pppActive.length,
+            pppSecretCount: pppSecrets.length,
+            wireguardInterfaceCount: wgInterfaces.length,
+            wireguardPeerCount: wgPeers.length,
+            userCount: userRecords.length,
+            recentLogs: mapLogs(logRecords).slice(0, 8),
+          };
+        })().catch((err) => ({ error: err.message })),
+      ]);
+
+      const onlineCount = fleetResults.filter((d) => d.online).length;
+      const totalBytes = fleetResults.reduce((sum, d) => sum + d.rxBytes + d.txBytes, 0);
+
+      return {
+        fleet: {
+          totalDevices: devices.length,
+          onlineCount,
+          offlineCount: devices.length - onlineCount,
+          totalBytes: formatBytes(totalBytes),
+          devices: fleetResults,
+        },
+        active: activePanel,
+      };
     }),
   );
 }

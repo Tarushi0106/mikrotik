@@ -129,6 +129,45 @@ export async function testConnection({ host, user, password, mode = 'auto' }) {
   }
 }
 
+/**
+ * Connects to one device just long enough to read a snapshot for the admin overview:
+ * reachability, RouterOS version/board, uptime, and total bytes moved across all its
+ * interfaces (a cumulative total since last reboot, not a live rate — getting a live rate
+ * would need two samples spaced apart for every device, which is too slow for an overview
+ * covering many devices at once).
+ */
+export async function getDeviceSnapshot({ host, user, password, apiMode }) {
+  let client = null;
+  try {
+    client = await createClient({ host, user, password, mode: apiMode });
+    const [resource, interfaces] = await Promise.all([
+      client.get('system/resource'),
+      client.list('interface'),
+    ]);
+
+    let totalRxBytes = 0;
+    let totalTxBytes = 0;
+    for (const iface of interfaces) {
+      totalRxBytes += Number(iface?.['rx-byte'] ?? 0) || 0;
+      totalTxBytes += Number(iface?.['tx-byte'] ?? 0) || 0;
+    }
+
+    return {
+      online: true,
+      version: resource?.version ?? null,
+      board: resource?.['board-name'] ?? null,
+      uptime: resource?.uptime ?? null,
+      interfaceCount: interfaces.length,
+      totalRxBytes,
+      totalTxBytes,
+    };
+  } catch (err) {
+    return { online: false, error: err.message };
+  } finally {
+    if (client) await client.close();
+  }
+}
+
 /** Switches which saved device the whole app reads from. */
 export async function activateDevice(device) {
   config.router.host = device.host;
