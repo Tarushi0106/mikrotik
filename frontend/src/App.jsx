@@ -3,7 +3,6 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Login from './pages/Login';
-import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Devices from './pages/Devices';
@@ -24,7 +23,6 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/admin" element={<Admin />} />
             <Route element={<DashboardLayout />}>

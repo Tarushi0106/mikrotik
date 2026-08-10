@@ -1,12 +1,11 @@
 import crypto from 'node:crypto';
 import { config } from './config.js';
-import { hasAnyUser, createUser, verifyUser } from './lib/userStore.js';
 
 const COOKIE_NAME = 'st-net-session';
 
 /**
- * Dashboard sign-in is now a local admin account (username + password, stored hashed in
- * data/users.json) — separate from any MikroTik device's own credentials. Devices with
+ * Dashboard sign-in is a single fixed admin account (see config.dashboardAuth, defaults
+ * to admin/admin) — separate from any MikroTik device's own credentials. Devices with
  * their own IP/user/password are managed under /api/devices instead (see routes.js).
  */
 
@@ -50,35 +49,6 @@ export function requireAuth(req, res, next) {
 }
 
 export function registerAuthRoutes(app) {
-  // Unauthenticated: lets the sign-in screen know whether to offer "sign up" or not.
-  app.get('/api/auth/status', (req, res) => {
-    res.json({ hasUsers: hasAnyUser() });
-  });
-
-  app.post('/api/auth/signup', (req, res) => {
-    const username = String(req.body?.username ?? '').trim();
-    const password = String(req.body?.password ?? '');
-
-    if (!username || !password) {
-      res.status(400).json({ error: 'Enter both an admin ID and a password.' });
-      return;
-    }
-    if (password.length < 4) {
-      res.status(400).json({ error: 'Password must be at least 4 characters.' });
-      return;
-    }
-
-    try {
-      createUser({ username, password });
-    } catch (err) {
-      res.status(409).json({ error: err.message });
-      return;
-    }
-
-    setCookie(res, issue(username));
-    res.json({ username });
-  });
-
   app.post('/api/auth/login', (req, res) => {
     const username = String(req.body?.username ?? '').trim();
     const password = String(req.body?.password ?? '');
@@ -88,7 +58,8 @@ export function registerAuthRoutes(app) {
       return;
     }
 
-    if (!verifyUser({ username, password })) {
+    const { username: validUsername, password: validPassword } = config.dashboardAuth;
+    if (username !== validUsername || password !== validPassword) {
       res.status(401).json({ error: 'Incorrect admin ID or password.' });
       return;
     }

@@ -35,7 +35,23 @@ export default function Devices() {
   const [rowBusyId, setRowBusyId] = useState(null);
 
   const columns = [
-    { key: 'name', header: 'Name' },
+    {
+      key: 'name',
+      header: 'Name',
+      render: (row) => (
+        <span className="inline-flex items-center gap-2">
+          {row.name}
+          {row.active && (
+            <span
+              title="This device is currently powering the dashboard"
+              className="text-[10px] font-semibold uppercase tracking-wide text-brand-600 bg-brand-50 rounded-full px-2 py-0.5"
+            >
+              Viewing
+            </span>
+          )}
+        </span>
+      ),
+    },
     { key: 'host', header: 'IP Address' },
     { key: 'apiMode', header: 'API' },
     { key: 'rest', header: 'REST API', render: (row) => <ServiceDot open={row.services?.rest} /> },
@@ -43,9 +59,13 @@ export default function Devices() {
     { key: 'winbox', header: 'WinBox', render: (row) => <ServiceDot open={row.services?.winbox} /> },
     { key: 'ssh', header: 'SSH', render: (row) => <ServiceDot open={row.services?.ssh} /> },
     {
-      key: 'active',
+      key: 'online',
       header: 'Status',
-      render: (row) => <StatusPill status={row.active ? 'active' : 'inactive'} />,
+      render: (row) => (
+        <span title={row.offlineReason ?? undefined}>
+          <StatusPill status={row.online ? 'online' : 'offline'} />
+        </span>
+      ),
     },
     {
       key: 'actions',
@@ -55,7 +75,7 @@ export default function Devices() {
           {!row.active && (
             <button
               type="button"
-              title="Connect to this device"
+              title="Switch the dashboard to view this device"
               disabled={rowBusyId === row.id}
               onClick={() => activate(row)}
               className="p-1.5 rounded-md text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-40 transition-colors"
@@ -152,7 +172,7 @@ export default function Devices() {
     <div>
       <PageHeader
         title="Devices"
-        description="MikroTik routers this dashboard can connect to. Only one is active at a time."
+        description="MikroTik routers this dashboard can connect to. All are monitored for reachability; pick one to view its full dashboard."
       />
 
       <div className="mb-6">

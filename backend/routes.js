@@ -398,13 +398,21 @@ export function registerApiRoutes(app) {
     '/api/devices',
     requireAuth,
     handler(async () => {
-      const devices = listDevices();
+      const devices = listDevicesWithSecrets();
+      const activeId = getActiveDevice()?.id;
       return Promise.all(
         devices.map(async (d) => {
-          const services = await scanServices(d.host).catch(() => []);
+          const { password: _pw, ...safe } = d;
+          const [services, snapshot] = await Promise.all([
+            scanServices(d.host).catch(() => []),
+            getDeviceSnapshot(d),
+          ]);
           const isOpen = (key) => services.find((s) => s.key === key)?.open ?? false;
           return {
-            ...d,
+            ...safe,
+            active: d.id === activeId,
+            online: snapshot.online,
+            offlineReason: snapshot.online ? null : snapshot.error,
             services: {
               rest: isOpen('rest') || isOpen('rest-ssl'),
               binary: isOpen('binary') || isOpen('binary-ssl'),

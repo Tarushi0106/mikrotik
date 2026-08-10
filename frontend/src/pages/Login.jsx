@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate, Link } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { FiLock, FiUser, FiWifi } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
@@ -71,24 +71,9 @@ export default function Login() {
             Use your NetControl admin ID and password.
           </p>
 
-          {health && (
-            <div
-              className={`rounded-lg px-3 py-2 text-xs ${
-                health.router === 'ok'
-                  ? 'bg-emerald-50 text-emerald-800'
-                  : 'bg-amber-50 text-amber-800'
-              }`}
-            >
-              {health.router === 'ok' ? (
-                <>
-                  Connected to <span className="font-semibold">{health.board}</span> running
-                  RouterOS {health.routerOS} over the {health.transport} API.
-                </>
-              ) : (
-                <>
-                  <span className="font-semibold">Router not reachable.</span> {health.error}
-                </>
-              )}
+          {health && health.router !== 'ok' && (
+            <div className="rounded-lg px-3 py-2 text-xs bg-amber-50 text-amber-800">
+              <span className="font-semibold">Router not reachable.</span> {health.error}
             </div>
           )}
 
@@ -133,10 +118,6 @@ export default function Login() {
           >
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
-
-          <p className="text-center text-xs text-ink-500">
-            No account yet? <Link to="/signup" className="text-brand-600 font-medium hover:underline">Sign up</Link>
-          </p>
         </form>
 
         <p className="text-center text-ink-500/70 text-xs mt-5">

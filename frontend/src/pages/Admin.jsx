@@ -49,7 +49,7 @@ const deviceColumns = [
   {
     key: 'online',
     header: 'Status',
-    render: (row) => <StatusPill status={row.online ? 'running' : 'stopped'} />,
+    render: (row) => <StatusPill status={row.online ? 'online' : 'offline'} />,
   },
   { key: 'board', header: 'Model', render: (row) => row.board || <span className="text-ink-500/60">&mdash;</span> },
   { key: 'version', header: 'RouterOS', render: (row) => row.version || <span className="text-ink-500/60">&mdash;</span> },

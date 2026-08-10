@@ -41,12 +41,6 @@ export function AuthProvider({ children }) {
     return result;
   }, []);
 
-  const signup = useCallback(async (username, password) => {
-    const result = await api.post('/auth/signup', { username, password });
-    setUser({ username: result.username });
-    return result;
-  }, []);
-
   const logout = useCallback(async () => {
     try {
       await api.post('/auth/logout');
@@ -57,7 +51,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, initializing, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, initializing, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,10 +1,12 @@
 const styles = {
   running: 'bg-emerald-50 text-emerald-700',
+  online: 'bg-emerald-50 text-emerald-700',
   active: 'bg-emerald-50 text-emerald-700',
   bound: 'bg-emerald-50 text-emerald-700',
   accept: 'bg-emerald-50 text-emerald-700',
   waiting: 'bg-amber-50 text-amber-700',
   disabled: 'bg-ink-900/5 text-ink-500',
+  offline: 'bg-ink-900/5 text-ink-500',
   drop: 'bg-brand-50 text-brand-700',
   warning: 'bg-amber-50 text-amber-700',
   info: 'bg-sky-50 text-sky-700',

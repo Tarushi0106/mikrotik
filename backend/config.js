@@ -28,6 +28,10 @@ export const config = {
     port: num(process.env.PORT, 4000),
     sessionTtlMs: num(process.env.SESSION_TTL_MINUTES, 480) * 60 * 1000,
   },
+  dashboardAuth: {
+    username: process.env.DASHBOARD_USER ?? 'admin',
+    password: process.env.DASHBOARD_PASSWORD ?? 'admin',
+  },
   traffic: {
     // Interface whose counters drive the dashboard chart. Blank = busiest running interface.
     interface: process.env.TRAFFIC_INTERFACE ?? '',
