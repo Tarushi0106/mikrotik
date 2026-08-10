@@ -7,14 +7,6 @@ import { startSampler, stopSampler } from './trafficSampler.js';
 import { resetClient, activateDevice } from './routeros/index.js';
 import { listDevices, addDevice, getActiveDevice } from './lib/deviceStore.js';
 
-process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', err);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.error('[unhandledRejection]', err);
-});
-
 // First run: seed the device list from .env so the router already configured there keeps
 // working. After that, the device store (not .env) is the source of truth for which
 // router is active — switching devices in the dashboard persists across restarts.
