@@ -11,6 +11,7 @@ import Wireless from './pages/Wireless';
 import Dhcp from './pages/Dhcp';
 import Ppp from './pages/Ppp';
 import Wireguard from './pages/Wireguard';
+import Tunnels from './pages/Tunnels';
 import Firewall from './pages/Firewall';
 import IpAddresses from './pages/IpAddresses';
 import Logs from './pages/Logs';
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/dhcp" element={<Dhcp />} />
               <Route path="/ppp" element={<Ppp />} />
               <Route path="/wireguard" element={<Wireguard />} />
+              <Route path="/tunnels" element={<Tunnels />} />
               <Route path="/firewall" element={<Firewall />} />
               <Route path="/ip-addresses" element={<IpAddresses />} />
               <Route path="/logs" element={<Logs />} />
