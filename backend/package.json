@@ -5,12 +5,16 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "probe": "node probe.js"
+    "probe": "node probe.js",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "node-routeros": "^1.6.8"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }

@@ -1,0 +1,13 @@
+diff --git a/node_modules/node-routeros/dist/Channel.js b/node_modules/node-routeros/dist/Channel.js
+index ef56575..aa76a17 100644
+--- a/node_modules/node-routeros/dist/Channel.js
++++ b/node_modules/node-routeros/dist/Channel.js
+@@ -123,6 +123,8 @@ class Channel extends events_1.EventEmitter {
+                 if (this.streaming)
+                     this.emit('stream', parsed);
+                 break;
++            case '!empty':
++                break;
+             case '!done':
+                 if (!this.trapped)
+                     this.emit('done', this.data);
