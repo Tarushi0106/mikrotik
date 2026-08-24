@@ -6,7 +6,6 @@ import StatusPill from '../components/ui/StatusPill';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
 import { api } from '../api/client';
-import { pppActive as demoPppActive, pppSecrets as demoPppSecrets } from '../data/mockData';
 
 const activeColumns = [
   { key: 'name', header: 'Name' },
@@ -29,8 +28,8 @@ const emptyForm = {
 };
 
 export default function Ppp() {
-  const active = useResource('/ppp/active', { fallback: demoPppActive, refreshMs: 10000 });
-  const secrets = useResource('/ppp/secrets', { fallback: demoPppSecrets, refreshMs: 15000 });
+  const active = useResource('/ppp/active', { fallback: [], refreshMs: 10000 });
+  const secrets = useResource('/ppp/secrets', { fallback: [], refreshMs: 15000 });
 
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);

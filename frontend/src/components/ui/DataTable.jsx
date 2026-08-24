@@ -1,4 +1,4 @@
-export default function DataTable({ columns, rows, keyField = 'id', onRowClick }) {
+export default function DataTable({ columns, rows, keyField = 'id', onRowClick, loading = false }) {
   return (
     <div className="bg-white rounded-lg border border-black/[0.04] shadow-sm shadow-black/[0.03] overflow-hidden">
       <div className="overflow-x-auto">
@@ -29,7 +29,7 @@ export default function DataTable({ columns, rows, keyField = 'id', onRowClick }
             {rows.length === 0 && (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-8 text-center text-ink-500">
-                  No records found.
+                  {loading ? 'Loading…' : 'No records found.'}
                 </td>
               </tr>
             )}

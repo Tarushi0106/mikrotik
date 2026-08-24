@@ -31,17 +31,17 @@ export default function Topbar({ onMenuClick }) {
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              Demo data
+              Offline
             </span>
           )}
-          <span className="hidden sm:inline">{system.identity}</span>
+          <span className="hidden sm:inline">{system?.identity ?? '—'}</span>
         </div>
       </div>
 
       <div className="flex items-center gap-4">
         <div className="hidden md:flex items-center gap-2 text-xs text-ink-500">
           <FiWifi className="text-brand-600" />
-          RouterOS {system.routerOS}
+          RouterOS {system?.routerOS ?? '—'}
         </div>
         <div className="h-8 w-px bg-black/10 hidden md:block" />
 
@@ -68,7 +68,7 @@ export default function Topbar({ onMenuClick }) {
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-black/[0.06] shadow-lg shadow-black/10 py-1.5 z-40 animate-page">
                 <div className="px-3.5 py-2.5 border-b border-black/[0.06]">
                   <p className="text-sm font-semibold text-ink-900 truncate">{username}</p>
-                  <p className="text-xs text-ink-500 truncate">{system.identity}</p>
+                  <p className="text-xs text-ink-500 truncate">{system?.identity ?? '—'}</p>
                 </div>
                 <button
                   onClick={() => {

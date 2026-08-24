@@ -394,6 +394,42 @@ export function registerApiRoutes(app) {
     }),
   );
 
+  // Reachability/port-scan checks are real network round trips (can take seconds on a
+  // closed port or a slow WAN link), so they're cached per device and refreshed in the
+  // background rather than blocking every page load / poll on a fresh check.
+  const DEVICE_STATUS_TTL_MS = 15000;
+  const deviceStatusCache = new Map(); // id -> { online, offlineReason, services, updatedAt }
+  const deviceStatusInFlight = new Map(); // id -> Promise
+
+  function refreshDeviceStatus(device) {
+    const existing = deviceStatusInFlight.get(device.id);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      const [services, snapshot] = await Promise.all([
+        scanServices(device.host).catch(() => []),
+        getDeviceSnapshot(device),
+      ]);
+      const isOpen = (key) => services.find((s) => s.key === key)?.open ?? false;
+      const entry = {
+        online: snapshot.online,
+        offlineReason: snapshot.online ? null : snapshot.error,
+        services: {
+          rest: isOpen('rest') || isOpen('rest-ssl'),
+          binary: isOpen('binary') || isOpen('binary-ssl'),
+          winbox: isOpen('winbox'),
+          ssh: isOpen('ssh'),
+        },
+        updatedAt: Date.now(),
+      };
+      deviceStatusCache.set(device.id, entry);
+      return entry;
+    })().finally(() => deviceStatusInFlight.delete(device.id));
+
+    deviceStatusInFlight.set(device.id, promise);
+    return promise;
+  }
+
   app.get(
     '/api/devices',
     requireAuth,
@@ -403,23 +439,20 @@ export function registerApiRoutes(app) {
       return Promise.all(
         devices.map(async (d) => {
           const { password: _pw, ...safe } = d;
-          const [services, snapshot] = await Promise.all([
-            scanServices(d.host).catch(() => []),
-            getDeviceSnapshot(d),
-          ]);
-          const isOpen = (key) => services.find((s) => s.key === key)?.open ?? false;
-          return {
-            ...safe,
-            active: d.id === activeId,
-            online: snapshot.online,
-            offlineReason: snapshot.online ? null : snapshot.error,
-            services: {
-              rest: isOpen('rest') || isOpen('rest-ssl'),
-              binary: isOpen('binary') || isOpen('binary-ssl'),
-              winbox: isOpen('winbox'),
-              ssh: isOpen('ssh'),
-            },
+          const cached = deviceStatusCache.get(d.id);
+          if (!cached) {
+            // Nothing cached yet (first request since the server started) — wait once.
+            await refreshDeviceStatus(d).catch(() => {});
+          } else if (Date.now() - cached.updatedAt >= DEVICE_STATUS_TTL_MS) {
+            // Serve the stale value now; let the next request pick up the fresh one.
+            refreshDeviceStatus(d).catch(() => {});
+          }
+          const status = deviceStatusCache.get(d.id) ?? {
+            online: false,
+            offlineReason: null,
+            services: { rest: false, binary: false, winbox: false, ssh: false },
           };
+          return { ...safe, active: d.id === activeId, ...status, updatedAt: undefined };
         }),
       );
     }),
@@ -457,6 +490,7 @@ export function registerApiRoutes(app) {
     handler(async (req) => {
       const wasActive = getActiveDevice()?.id === req.params.id;
       removeDevice(req.params.id);
+      deviceStatusCache.delete(req.params.id);
       const nextActive = getActiveDevice();
       if (wasActive) {
         if (nextActive) await activateDevice(nextActive);

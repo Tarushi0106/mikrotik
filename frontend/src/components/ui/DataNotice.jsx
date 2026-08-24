@@ -1,8 +1,8 @@
 import { FiAlertTriangle, FiLoader, FiRefreshCw } from 'react-icons/fi';
 
 /**
- * Banner that makes the data source explicit. Without this, the demo fallback silently
- * looks like real router data, which is worse than showing an error.
+ * Banner that surfaces connection problems plainly instead of letting a page look empty
+ * or, worse, silently show stale/fake numbers as if they were current.
  */
 export default function DataNotice({ error, live, loading, onRetry }) {
   if (live) return null;
@@ -24,7 +24,7 @@ export default function DataNotice({ error, live, loading, onRetry }) {
         <FiAlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-900">
-            Showing demo data &mdash; the router is not connected
+            Router not connected
           </p>
           <p className="mt-0.5 break-words text-xs text-amber-800">{error.message}</p>
           <p className="mt-1.5 text-xs text-amber-700">

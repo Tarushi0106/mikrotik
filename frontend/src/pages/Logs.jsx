@@ -1,7 +1,6 @@
 import PageHeader from '../components/ui/PageHeader';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
-import { systemLogs as demoSystemLogs } from '../data/mockData';
 
 const topicTone = (topic) => {
   if (topic.includes('warning')) return 'bg-amber-50 text-amber-700';
@@ -11,7 +10,7 @@ const topicTone = (topic) => {
 
 export default function Logs() {
   const { data, error, loading, live, refresh } = useResource('/logs', {
-    fallback: demoSystemLogs,
+    fallback: [],
     refreshMs: 15000,
   });
   const logs = data ?? [];

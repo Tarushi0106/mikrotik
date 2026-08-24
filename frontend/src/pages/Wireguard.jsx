@@ -6,7 +6,6 @@ import StatusPill from '../components/ui/StatusPill';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
 import { api } from '../api/client';
-import { wireguardInterfaces as demoWireguardInterfaces, wireguardPeers as demoWireguardPeers } from '../data/mockData';
 
 function truncateKey(key) {
   if (!key || key === '—') return key;
@@ -17,8 +16,8 @@ const emptyInterfaceForm = { name: '', listenPort: '', comment: '' };
 const emptyPeerForm = { interface: '', publicKey: '', allowedAddress: '', endpointAddress: '', endpointPort: '', comment: '' };
 
 export default function Wireguard() {
-  const interfaces = useResource('/wireguard/interfaces', { fallback: demoWireguardInterfaces, refreshMs: 15000 });
-  const peers = useResource('/wireguard/peers', { fallback: demoWireguardPeers, refreshMs: 10000 });
+  const interfaces = useResource('/wireguard/interfaces', { fallback: [], refreshMs: 15000 });
+  const peers = useResource('/wireguard/peers', { fallback: [], refreshMs: 10000 });
 
   const [ifaceForm, setIfaceForm] = useState(emptyInterfaceForm);
   const [ifaceSubmitting, setIfaceSubmitting] = useState(false);

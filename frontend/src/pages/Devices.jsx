@@ -176,7 +176,7 @@ export default function Devices() {
       />
 
       <div className="mb-6">
-        <DataTable columns={columns} rows={devices.data ?? []} />
+        <DataTable columns={columns} rows={devices.data ?? []} loading={devices.loading} />
       </div>
 
       <div className="bg-white rounded-lg border border-black/[0.04] shadow-sm shadow-black/[0.03] p-5 max-w-2xl">

@@ -6,7 +6,6 @@ import DataNotice from '../components/ui/DataNotice';
 import LiveUpdated from '../components/ui/LiveUpdated';
 import InterfaceDetail from '../components/ui/InterfaceDetail';
 import { useResource } from '../hooks/useResource';
-import { interfaces as demoInterfaces } from '../data/mockData';
 
 const columns = [
   { key: 'name', header: 'Name' },
@@ -25,7 +24,7 @@ const MAX_HISTORY_POINTS = 30; // 5 minutes of rolling history at the 10s poll i
 
 export default function Interfaces() {
   const { data, error, loading, live, lastUpdated, refresh } = useResource('/interfaces', {
-    fallback: demoInterfaces,
+    fallback: [],
     refreshMs: REFRESH_MS,
   });
   const [selected, setSelected] = useState(null);

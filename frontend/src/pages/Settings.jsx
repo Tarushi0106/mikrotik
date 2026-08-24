@@ -30,9 +30,9 @@ export default function Settings() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <form className="bg-white rounded-lg border border-black/[0.04] shadow-sm shadow-black/[0.03] p-5 space-y-4" onSubmit={(e) => e.preventDefault()}>
           <h3 className="font-bold text-sm text-ink-900">Router Identity</h3>
-          <Field label="Identity" defaultValue={system.identity} />
-          <Field label="Model" defaultValue={system.model} />
-          <Field label="RouterOS Version" defaultValue={system.routerOS} />
+          <Field label="Identity" defaultValue={system?.identity ?? ''} />
+          <Field label="Model" defaultValue={system?.model ?? ''} />
+          <Field label="RouterOS Version" defaultValue={system?.routerOS ?? ''} />
           <button
             type="submit"
             className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors"
@@ -65,7 +65,7 @@ export default function Settings() {
             </div>
             <div className="flex justify-between py-2">
               <dt className="text-ink-500">Frontend status</dt>
-              <dd className="text-ink-900 font-medium">{live ? 'Connected to router' : 'Showing demo data'}</dd>
+              <dd className="text-ink-900 font-medium">{live ? 'Connected to router' : 'Not connected'}</dd>
             </div>
           </dl>
         </div>

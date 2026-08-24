@@ -3,7 +3,6 @@ import DataTable from '../components/ui/DataTable';
 import StatusPill from '../components/ui/StatusPill';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
-import { dhcpLeases as demoDhcpLeases } from '../data/mockData';
 
 const columns = [
   { key: 'address', header: 'IP Address' },
@@ -15,7 +14,7 @@ const columns = [
 
 export default function Dhcp() {
   const { data, error, loading, live, refresh } = useResource('/dhcp', {
-    fallback: demoDhcpLeases,
+    fallback: [],
     refreshMs: 15000,
   });
 

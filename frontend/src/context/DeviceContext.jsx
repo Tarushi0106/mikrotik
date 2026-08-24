@@ -1,6 +1,5 @@
 import { createContext, useContext } from 'react';
 import { useResource } from '../hooks/useResource';
-import { systemInfo as demoSystemInfo } from '../data/mockData';
 
 const DeviceContext = createContext(null);
 
@@ -10,7 +9,7 @@ const DeviceContext = createContext(null);
  */
 export function DeviceProvider({ children }) {
   const { data, error, loading, live, refresh } = useResource('/system', {
-    fallback: demoSystemInfo,
+    fallback: null,
     refreshMs: 15000,
   });
 

@@ -16,14 +16,6 @@ import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
 import { useDevice } from '../context/DeviceContext';
 import { api } from '../api/client';
-import { systemInfo, trafficHistory, interfaces, wirelessClients } from '../data/mockData';
-
-const demoOverview = {
-  system: systemInfo,
-  interfaces,
-  wirelessClients,
-  traffic: { history: trafficHistory },
-};
 
 const RANGES = [
   { key: '10m', label: '10 min' },
@@ -37,7 +29,7 @@ const RANGES = [
 
 export default function Dashboard() {
   const { data, error, loading, live, refresh } = useResource('/overview', {
-    fallback: demoOverview,
+    fallback: null,
     refreshMs: 10000,
   });
   const devices = useResource('/devices', { fallback: [], refreshMs: 0 });
@@ -61,18 +53,17 @@ export default function Dashboard() {
     }
   }
 
-  const overview = data ?? demoOverview;
-  const { system } = overview;
-  const overviewInterfaces = overview.interfaces ?? [];
-  const overviewWirelessClients = overview.wirelessClients ?? [];
-  const memPct = Math.round((system.memoryUsedMB / system.memoryTotalMB) * 100);
-  const diskPct = Math.round((system.diskUsedMB / system.diskTotalMB) * 100);
+  const system = data?.system ?? null;
+  const overviewInterfaces = data?.interfaces ?? [];
+  const overviewWirelessClients = data?.wirelessClients ?? [];
+  const memPct = system ? Math.round((system.memoryUsedMB / system.memoryTotalMB) * 100) : 0;
+  const diskPct = system ? Math.round((system.diskUsedMB / system.diskTotalMB) * 100) : 0;
 
   const [range, setRange] = useState('24h');
   const [customDate, setCustomDate] = useState('');
   const trafficPath = customDate ? `/traffic?date=${customDate}` : `/traffic?range=${range}`;
   const traffic = useResource(trafficPath, {
-    fallback: demoOverview.traffic,
+    fallback: { history: [] },
     refreshMs: customDate ? 0 : 10000,
   });
   const trafficLabel = customDate
@@ -83,7 +74,7 @@ export default function Dashboard() {
     <div>
       <PageHeader
         title="Dashboard"
-        description={`${system.identity} · ${system.model} · RouterOS ${system.routerOS}`}
+        description={system ? `${system.identity} · ${system.model} · RouterOS ${system.routerOS}` : 'Live status for the selected router.'}
       />
 
       <div className="flex items-center flex-wrap gap-2 mb-4">
@@ -110,6 +101,8 @@ export default function Dashboard() {
 
       <DataNotice error={error} live={live} loading={loading} onRetry={refresh} />
 
+      {system && (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard icon={FiCpu} label="CPU Load" value={`${system.cpuLoad}%`} sub={`${system.cpuCount ?? 1}-core`} />
         <StatCard icon={FiHardDrive} label="Memory" value={`${memPct}%`} sub={`${system.memoryUsedMB} / ${system.memoryTotalMB} MB`} />
@@ -157,7 +150,7 @@ export default function Dashboard() {
           </div>
 
           {!traffic.live && traffic.error && (
-            <p className="mb-3 text-xs text-amber-700">Showing demo traffic &mdash; {traffic.error.message}</p>
+            <p className="mb-3 text-xs text-amber-700">Could not load traffic history &mdash; {traffic.error.message}</p>
           )}
 
           <div className="h-64">
@@ -243,6 +236,8 @@ export default function Dashboard() {
           </ul>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

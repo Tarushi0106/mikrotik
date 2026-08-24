@@ -28,7 +28,7 @@ import { api } from '../api/client';
 
 const REFRESH_MS = 20000;
 
-const demoOverview = {
+const emptyOverview = {
   fleet: { totalDevices: 0, onlineCount: 0, offlineCount: 0, totalBytes: '0 B', devices: [] },
   active: null,
 };
@@ -85,11 +85,11 @@ function TableSection({ title, children }) {
 export default function Admin() {
   const { logout } = useAuth();
   const { data, error, loading, live, lastUpdated, refresh } = useResource('/admin/overview', {
-    fallback: demoOverview,
+    fallback: emptyOverview,
     refreshMs: REFRESH_MS,
   });
-  const overview = data ?? demoOverview;
-  const fleet = overview.fleet ?? demoOverview.fleet;
+  const overview = data ?? emptyOverview;
+  const fleet = overview.fleet ?? emptyOverview.fleet;
   const active = overview.active && !overview.active.error ? overview.active : null;
   const activeError = overview.active?.error ?? null;
   const devices = fleet.devices ?? [];

@@ -2,7 +2,6 @@ import PageHeader from '../components/ui/PageHeader';
 import DataTable from '../components/ui/DataTable';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
-import { wirelessClients as demoWirelessClients } from '../data/mockData';
 
 function signalTone(dbm) {
   if (dbm >= -60) return 'text-emerald-600';
@@ -33,7 +32,7 @@ const columns = [
 
 export default function Wireless() {
   const { data, error, loading, live, refresh } = useResource('/wireless', {
-    fallback: demoWirelessClients,
+    fallback: [],
     refreshMs: 10000,
   });
 

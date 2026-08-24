@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 
 /**
- * Fetches one API endpoint and reports whether the result is live router data or the
- * bundled demo data.
+ * Fetches one API endpoint and reports whether the result reflects the live router.
  *
- * The fallback exists so the UI stays usable while the device is unreachable — which is
- * the normal state during development. Pages must surface `live === false` to the user,
- * otherwise demo numbers read as real ones.
+ * `fallback` is only ever a neutral empty shape (e.g. `[]` or `null`) used before the
+ * first successful load — never fabricated data. On error, previously loaded real data
+ * (if any) is left in place rather than replaced, and `live=false` plus `error` tell the
+ * page to show a "not connected" state instead of pretending the numbers are current.
  */
 export function useResource(path, { fallback = null, refreshMs = 0 } = {}) {
   const [data, setData] = useState(fallback);
@@ -31,7 +31,6 @@ export function useResource(path, { fallback = null, refreshMs = 0 } = {}) {
       if (!activeRef.current) return;
       setError(err);
       setLive(false);
-      setData(fallback);
     } finally {
       if (activeRef.current) setLoading(false);
     }

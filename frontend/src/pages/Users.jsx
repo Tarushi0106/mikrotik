@@ -3,7 +3,6 @@ import DataTable from '../components/ui/DataTable';
 import StatusPill from '../components/ui/StatusPill';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
-import { users as demoUsers } from '../data/mockData';
 
 const columns = [
   { key: 'username', header: 'Username' },
@@ -15,7 +14,7 @@ const columns = [
 
 export default function Users() {
   const { data, error, loading, live, refresh } = useResource('/users', {
-    fallback: demoUsers,
+    fallback: [],
     refreshMs: 15000,
   });
 

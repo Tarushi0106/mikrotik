@@ -2,7 +2,6 @@ import PageHeader from '../components/ui/PageHeader';
 import DataTable from '../components/ui/DataTable';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
-import { ipAddresses as demoIpAddresses } from '../data/mockData';
 
 const columns = [
   { key: 'address', header: 'Address' },
@@ -13,7 +12,7 @@ const columns = [
 
 export default function IpAddresses() {
   const { data, error, loading, live, refresh } = useResource('/ip-addresses', {
-    fallback: demoIpAddresses,
+    fallback: [],
     refreshMs: 15000,
   });
 

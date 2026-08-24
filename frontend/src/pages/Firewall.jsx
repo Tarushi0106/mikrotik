@@ -3,7 +3,6 @@ import DataTable from '../components/ui/DataTable';
 import StatusPill from '../components/ui/StatusPill';
 import DataNotice from '../components/ui/DataNotice';
 import { useResource } from '../hooks/useResource';
-import { firewallRules as demoFirewallRules } from '../data/mockData';
 
 const columns = [
   { key: 'chain', header: 'Chain' },
@@ -22,7 +21,7 @@ const columns = [
 
 export default function Firewall() {
   const { data, error, loading, live, refresh } = useResource('/firewall', {
-    fallback: demoFirewallRules,
+    fallback: [],
     refreshMs: 15000,
   });
 
