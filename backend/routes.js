@@ -1,9 +1,22 @@
 import { config, describeTarget } from './config.js';
-import { getClient, resetClient, testConnection, activateDevice, getDeviceSnapshot } from './routeros/index.js';
+import {
+  getClient,
+  createClient,
+  resetClient,
+  testConnection,
+  activateDevice,
+  getDeviceSnapshot,
+  provisionWireguardTunnel,
+  teardownWireguardTunnel,
+  provisionPppTunnel,
+  teardownPppTunnel,
+  pppTunnelActive,
+} from './routeros/index.js';
+import crypto from 'node:crypto';
 import { requireAuth } from './auth.js';
 import { getRates, queryHistory, getSamplerStatus } from './trafficSampler.js';
 import { scanServices } from './lib/portScan.js';
-import { formatBytes, formatUptime } from './lib/format.js';
+import { formatBytes, formatUptime, pick } from './lib/format.js';
 import {
   listDevices,
   addDevice,
@@ -13,6 +26,17 @@ import {
   setActiveDevice,
   listDevicesWithSecrets,
 } from './lib/deviceStore.js';
+import {
+  listTunnels,
+  getTunnel,
+  addTunnel,
+  removeTunnel,
+  newTunnelId,
+  nextTunnelSubnet,
+  splitTunnelSubnet,
+} from './lib/tunnelStore.js';
+
+const TUNNEL_TYPES = ['wireguard', 'pptp', 'l2tp', 'sstp'];
 import {
   flattenHealth,
   mapSystemInfo,
@@ -344,6 +368,186 @@ export function registerApiRoutes(app) {
       const client = await getClient();
       await client.remove('interface/wireguard/peers', req.params.id);
       return mapWireguardPeers(await client.list('interface/wireguard/peers'));
+    }),
+  );
+
+  // ── Tunnels: site-to-site links (WireGuard, PPTP, L2TP, SSTP) between two devices ────
+  // WireGuard is symmetric (a peer on each side); the PPP-family protocols are
+  // client/server, so for those deviceA is always the server and deviceB dials in.
+  const TUNNEL_STATUS_TTL_MS = 15000;
+  const tunnelStatusCache = new Map(); // id -> { statusA, statusB, updatedAt }
+
+  async function peerHandshake(device, interfaceName) {
+    let client = null;
+    try {
+      client = await createClient({ host: device.host, user: device.user, password: device.password, mode: device.apiMode });
+      const peers = await client.list('interface/wireguard/peers');
+      const peer = peers.find((p) => pick(p, 'interface') === interfaceName);
+      return pick(peer, 'last-handshake') || null;
+    } catch {
+      return null;
+    } finally {
+      if (client) await client.close().catch(() => {});
+    }
+  }
+
+  async function refreshTunnelStatus(tunnel) {
+    // getDevice() (unlike listDevices()) includes the password — needed to connect.
+    const deviceA = getDevice(tunnel.deviceA.id);
+    const deviceB = getDevice(tunnel.deviceB.id);
+
+    let statusA = null;
+    let statusB = null;
+    if (tunnel.type === 'wireguard') {
+      [statusA, statusB] = await Promise.all([
+        deviceA ? peerHandshake(deviceA, tunnel.interfaceName) : null,
+        deviceB ? peerHandshake(deviceB, tunnel.interfaceName) : null,
+      ]);
+    } else {
+      // PPP-family tunnels are one link, not two independent sides — a session on the
+      // server (deviceA) means the whole tunnel is up, so both sides report it.
+      const active = deviceA ? await pppTunnelActive(deviceA, tunnel.secretName) : null;
+      statusA = active;
+      statusB = active;
+    }
+
+    const entry = { statusA, statusB, updatedAt: Date.now() };
+    tunnelStatusCache.set(tunnel.id, entry);
+    return entry;
+  }
+
+  app.get(
+    '/api/tunnels',
+    requireAuth,
+    handler(async () => {
+      const tunnels = listTunnels();
+      const devices = listDevices();
+      const deviceById = new Map(devices.map((d) => [d.id, d]));
+
+      return Promise.all(
+        tunnels.map(async (t) => {
+          const cached = tunnelStatusCache.get(t.id);
+          if (!cached || Date.now() - cached.updatedAt >= TUNNEL_STATUS_TTL_MS) {
+            refreshTunnelStatus(t).catch(() => {});
+          }
+          const status = cached ?? { statusA: null, statusB: null };
+          const deviceA = deviceById.get(t.deviceA.id);
+          const deviceB = deviceById.get(t.deviceB.id);
+          return {
+            id: t.id,
+            name: t.name,
+            type: t.type,
+            subnet: t.subnet,
+            interfaceName: t.interfaceName,
+            createdAt: t.createdAt,
+            deviceA: {
+              id: t.deviceA.id,
+              name: deviceA?.name ?? t.deviceA.name ?? 'Unknown device',
+              host: deviceA?.host ?? t.deviceA.host,
+              address: t.deviceA.address,
+              listenPort: t.deviceA.listenPort,
+              role: t.type === 'wireguard' ? null : 'server',
+              status: status.statusA,
+              missing: !deviceA,
+            },
+            deviceB: {
+              id: t.deviceB.id,
+              name: deviceB?.name ?? t.deviceB.name ?? 'Unknown device',
+              host: deviceB?.host ?? t.deviceB.host,
+              address: t.deviceB.address,
+              listenPort: t.deviceB.listenPort,
+              role: t.type === 'wireguard' ? null : 'client',
+              status: status.statusB,
+              missing: !deviceB,
+            },
+          };
+        }),
+      );
+    }),
+  );
+
+  app.post(
+    '/api/tunnels',
+    requireAuth,
+    handler(async (req) => {
+      requireFields(req.body, ['deviceAId', 'deviceBId']);
+      const { name, deviceAId, deviceBId } = req.body;
+      const type = TUNNEL_TYPES.includes(req.body.type) ? req.body.type : 'wireguard';
+      if (deviceAId === deviceBId) throw new ValidationError('Pick two different devices to tunnel between.');
+
+      // getDevice() (unlike listDevices()) includes the password — needed to connect.
+      const deviceA = getDevice(deviceAId);
+      const deviceB = getDevice(deviceBId);
+      if (!deviceA || !deviceB) throw new ValidationError('One of the selected devices no longer exists.');
+
+      const id = newTunnelId();
+      const interfaceName = `nc-${id.slice(0, 8)}`;
+      const subnet = nextTunnelSubnet();
+      const tunnelName = name || `${deviceA.name} ↔ ${deviceB.name}`;
+      const comment = `NetControl tunnel: ${tunnelName}`;
+
+      let record;
+      if (type === 'wireguard') {
+        const result = await provisionWireguardTunnel({ deviceA, deviceB, interfaceName, subnet, comment });
+        record = addTunnel({
+          id,
+          name: tunnelName,
+          type,
+          subnet,
+          interfaceName,
+          deviceA: { id: deviceAId, name: deviceA.name, host: deviceA.host, address: result.addressA, listenPort: result.listenPortA },
+          deviceB: { id: deviceBId, name: deviceB.name, host: deviceB.host, address: result.addressB, listenPort: result.listenPortB },
+        });
+      } else {
+        const { addressA, addressB } = splitTunnelSubnet(subnet);
+        const secretName = `nc-${id.slice(0, 8)}`;
+        const secretPassword = crypto.randomBytes(9).toString('base64url');
+        await provisionPppTunnel({ type, deviceA, deviceB, interfaceName, secretName, secretPassword, addressA, addressB, comment });
+        record = addTunnel({
+          id,
+          name: tunnelName,
+          type,
+          subnet,
+          interfaceName,
+          secretName,
+          deviceA: { id: deviceAId, name: deviceA.name, host: deviceA.host, address: addressA },
+          deviceB: { id: deviceBId, name: deviceB.name, host: deviceB.host, address: addressB },
+        });
+      }
+
+      return record;
+    }),
+  );
+
+  app.delete(
+    '/api/tunnels/:id',
+    requireAuth,
+    handler(async (req) => {
+      const tunnel = getTunnel(req.params.id);
+      if (!tunnel) throw new ValidationError('Unknown tunnel.');
+
+      // getDevice() (unlike listDevices()) includes the password — needed to connect.
+      const deviceA = getDevice(tunnel.deviceA.id);
+      const deviceB = getDevice(tunnel.deviceB.id);
+
+      if (tunnel.type === 'wireguard') {
+        await Promise.all([
+          deviceA ? teardownWireguardTunnel({ device: deviceA, interfaceName: tunnel.interfaceName }).catch(() => {}) : null,
+          deviceB ? teardownWireguardTunnel({ device: deviceB, interfaceName: tunnel.interfaceName }).catch(() => {}) : null,
+        ]);
+      } else {
+        await teardownPppTunnel({
+          type: tunnel.type,
+          deviceA,
+          deviceB,
+          interfaceName: tunnel.interfaceName,
+          secretName: tunnel.secretName,
+        }).catch(() => {});
+      }
+
+      tunnelStatusCache.delete(tunnel.id);
+      removeTunnel(tunnel.id);
+      return { removed: tunnel.id };
     }),
   );
 

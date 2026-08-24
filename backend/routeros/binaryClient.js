@@ -82,6 +82,10 @@ export function createBinaryClient(options) {
     async update(path, id, fields) {
       await run(`/${path.replace(/^\/+/, '')}/set`, [`=.id=${id}`, ...toParams(fields)]);
     },
+    /** For singleton "settings" menus (e.g. a *-server enable switch) that have no .id. */
+    async set(path, fields) {
+      await run(`/${path.replace(/^\/+/, '')}/set`, toParams(fields));
+    },
     async remove(path, id) {
       await run(`/${path.replace(/^\/+/, '')}/remove`, [`=.id=${id}`]);
     },

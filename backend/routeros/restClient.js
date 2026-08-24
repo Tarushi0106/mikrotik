@@ -105,6 +105,10 @@ export function createRestClient(options) {
     async update(path, id, fields) {
       await request('PATCH', `${path.replace(/^\/+/, '')}/${id}`, fields);
     },
+    /** For singleton "settings" menus (e.g. a *-server enable switch) that have no .id. */
+    async set(path, fields) {
+      await request('PATCH', path, fields);
+    },
     async remove(path, id) {
       await request('DELETE', `${path.replace(/^\/+/, '')}/${id}`);
     },
