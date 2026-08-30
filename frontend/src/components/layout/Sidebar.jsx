@@ -8,7 +8,6 @@ import {
   FiGlobe,
   FiActivity,
   FiUsers,
-  FiSettings,
   FiPhoneCall,
   FiKey,
   FiLink,
@@ -30,7 +29,6 @@ const navItems = [
   { to: '/ip-addresses', label: 'IP Addresses', icon: FiGlobe },
   { to: '/logs', label: 'System Logs', icon: FiActivity },
   { to: '/users', label: 'Users', icon: FiUsers },
-  { to: '/settings', label: 'Settings', icon: FiSettings },
 ];
 
 export default function Sidebar({ open, onNavigate, collapsed, onToggleCollapse }) {

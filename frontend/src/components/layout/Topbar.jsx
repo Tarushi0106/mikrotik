@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FiMenu, FiLogOut, FiWifi, FiChevronDown, FiSettings } from 'react-icons/fi';
+import { FiMenu, FiLogOut, FiWifi, FiChevronDown } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useDevice } from '../../context/DeviceContext';
 
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth();
   const { system, live } = useDevice();
-  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const initials = user?.username?.slice(0, 2).toUpperCase() || 'ST';
   const username = user?.username || 'admin';
@@ -70,15 +68,6 @@ export default function Topbar({ onMenuClick }) {
                   <p className="text-sm font-semibold text-ink-900 truncate">{username}</p>
                   <p className="text-xs text-ink-500 truncate">{system?.identity ?? '—'}</p>
                 </div>
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    navigate('/settings');
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-ink-700 hover:bg-ink-900/5 hover:text-ink-900 transition-colors duration-150"
-                >
-                  <FiSettings size={15} /> Account settings
-                </button>
                 <button
                   onClick={() => {
                     setMenuOpen(false);

@@ -16,7 +16,6 @@ import Firewall from './pages/Firewall';
 import IpAddresses from './pages/IpAddresses';
 import Logs from './pages/Logs';
 import Users from './pages/Users';
-import Settings from './pages/Settings';
 
 export default function App() {
   return (
@@ -39,7 +38,6 @@ export default function App() {
               <Route path="/ip-addresses" element={<IpAddresses />} />
               <Route path="/logs" element={<Logs />} />
               <Route path="/users" element={<Users />} />
-              <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>
         </Routes>
